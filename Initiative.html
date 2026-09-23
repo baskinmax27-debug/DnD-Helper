@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Трекер инициативы - ДнД друг</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #fff;
+      background: linear-gradient(135deg, #0b1020, #3b0b5c, #b30059, #ff6b00);
+      background-size: 300% 300%;
+      animation: gradientMove 15s ease infinite;
+      overflow-x: hidden;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* =========================
+       БОКОВОЕ МЕНЮ
+    ========================= */
+
+    #sideMenu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 60px;
+      height: 100vh;
+      height: 100dvh;
+      background: rgba(0, 0, 0, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-right: 2px solid #b300ff;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #sideMenu.open {
+      width: 250px;
+      box-shadow: 5px 0 30px rgba(0, 0, 0, 0.55);
+    }
+
+    #menuTop {
+      height: 60px;
+      min-height: 60px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+    }
+
+    #menuDots {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    #menuDots span {
+      display: block;
+      width: 27px;
+      height: 3px;
+      background: #fff;
+      border-radius: 2px;
+    }
+
+    #menuContent {
+      position: absolute;
+      left: 0;
+      top: 70px;
+      width: 250px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateX(-15px);
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.3s;
+    }
+
+    #sideMenu.open #menuContent {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateX(0);
+      transition: opacity 0.25s ease 0.1s, transform 0.25s ease 0.1s, visibility 0s linear 0s;
+    }
+
+    #menuContent a,
+    #menuContent button {
+      width: 100%;
+      min-height: 64px;
+      padding: 12px 16px;
+      background: #1a171d;
+      border: 1px solid #403b43;
+      border-radius: 12px;
+      color: #f5f5f5;
+      font-family: inherit;
+      font-size: 1.08rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #menuContent a:hover,
+    #menuContent button:hover {
+      background: #242026;
+      border-color: #5b5360;
+      transform: translateX(2px);
+      box-shadow: 0 0 15px rgba(255, 77, 240, 0.08);
+    }
+
+    /* =========================
+       ОСНОВА
+    ========================= */
+
+    .main {
+      position: relative;
+      z-index: 5;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 30px 30px 60px 85px;
+      transition: margin-left 0.3s ease;
+    }
+
+    .main.menu-open { margin-left: 250px; }
+
+    .tracker {
+      width: min(560px, 100%);
+      margin: 0 auto;
+    }
+
+    /* =========================
+       ШАПКА
+    ========================= */
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .back-btn {
+      border: none;
+      background: transparent;
+      color: #fff;
+      font-size: 40px;
+      font-weight: 300;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 3px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .back-btn:hover {
+      color: #ff9fbc;
+      transform: translateX(-3px);
+    }
+
+    .page-title {
+      margin: 0;
+      flex: 1;
+      font-size: clamp(1.65rem, 5vw, 2.2rem);
+      font-weight: 400;
+    }
+
+    .clear-btn {
+      border: none;
+      background: transparent;
+      color: #ff9fbc;
+      font-family: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 6px 0;
+    }
+
+    .clear-btn:hover { color: #fff; }
+
+
+    /* =========================
+       РАУНД / ТЕКУЩИЙ ХОД
+    ========================= */
+
+    .round-bar {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .round-box,
+    .current-turn-box {
+      min-height: 46px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .round-box strong {
+      color: #ff9fbc;
+      font-size: 1.2rem;
+    }
+
+    .current-turn-box {
+      min-width: 0;
+      justify-content: flex-end;
+    }
+
+    #currentTurnName {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #ff9fbc;
+      font-weight: 700;
+    }
+
+    /* =========================
+       ТАЙМЕР
+    ========================= */
+
+    .timer-card {
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+    }
+
+    .timer-label {
+      font-size: 0.95rem;
+      color: #ddd7dc;
+    }
+
+    #timerDisplay {
+      min-width: 65px;
+      font-size: 1.65rem;
+      font-weight: 600;
+      text-align: center;
+      color: #fff;
+    }
+
+    .timer-select,
+    .timer-btn,
+    .next-turn-btn {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-family: inherit;
+      cursor: pointer;
+      min-height: 40px;
+      padding: 7px 12px;
+      transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .timer-select option { color: #111; }
+
+    .timer-btn:hover,
+    .next-turn-btn:hover {
+      background: rgba(255, 255, 255, 0.23);
+      border-color: rgba(255, 77, 240, 0.45);
+    }
+
+    .next-turn-btn {
+      flex: 1;
+      min-width: 130px;
+      font-weight: 600;
+    }
+
+    /* =========================
+       ФОРМА
+    ========================= */
+
+    .form-card {
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+      margin-bottom: 14px;
+    }
+
+    .input-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .name-input,
+    .initiative-input,
+    .master-input {
+      width: 100%;
+      height: 58px;
+      padding: 0 17px;
+      background: rgba(20, 18, 24, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1.1rem;
+      outline: none;
+    }
+
+    .name-input:focus,
+    .initiative-input:focus,
+    .master-input:focus {
+      border-color: #ff9fbc;
+      box-shadow: 0 0 0 2px rgba(255, 159, 188, 0.12);
+    }
+
+    .initiative-input {
+      border-color: rgba(255, 159, 188, 0.7);
+    }
+
+    .initiative-label,
+    .master-label {
+      position: absolute;
+      left: 14px;
+      top: -10px;
+      padding: 0 6px;
+      background: #351126;
+      color: #ff9fbc;
+      font-size: 0.9rem;
+    }
+
+    .add-btn,
+    .master-toggle,
+    .master-generate {
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.14);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+      transition: transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .add-btn:hover:not(:disabled),
+    .master-toggle:hover,
+    .master-generate:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 77, 240, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25), 0 0 20px rgba(255, 77, 240, 0.12);
+    }
+
+    .add-btn:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: #aaa6ad;
+      cursor: default;
+    }
+
+    .master-toggle {
+      margin-bottom: 12px;
+    }
+
+    .master-panel {
+      display: none;
+      padding-top: 4px;
+    }
+
+    .master-panel.open { display: block; }
+
+    .master-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 0.8fr 0.8fr 0.8fr 0.8fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .master-grid .input-wrap { margin-bottom: 0; }
+
+    .master-input { font-size: 1rem; }
+
+    /* =========================
+       БЫСТРЫЕ ВРАГИ
+    ========================= */
+
+    .quick-title {
+      margin: 12px 2px 8px;
+      color: #ddd7dc;
+      font-size: 0.9rem;
+    }
+
+    .quick-enemies {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .quick-enemy {
+      min-height: 46px;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .quick-enemy:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 77, 240, 0.45);
+      transform: translateY(-2px);
+    }
+
+    /* =========================
+       УЧАСТНИКИ
+    ========================= */
+
+    #participants {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .participant {
+      min-height: 92px;
+      padding: 15px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+      animation: appear 0.25s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .participant.active {
+      border-color: #ff9fbc;
+      box-shadow: 0 0 0 2px rgba(255, 159, 188, 0.22), 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 22px rgba(255, 77, 240, 0.12);
+      transform: translateY(-1px);
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .initiative-number {
+      width: 58px;
+      color: #ff9fbc;
+      font-size: 2.2rem;
+      font-weight: 300;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .participant-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .participant-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .participant-subtitle {
+      margin-top: 2px;
+      color: #c8c4ca;
+      font-size: 0.9rem;
+    }
+
+    .delete-btn {
+      width: 42px;
+      height: 45px;
+      border: none;
+      background: transparent;
+      color: #fff0f3;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .delete-btn:hover {
+      color: #ff6b9b;
+      transform: scale(1.08);
+    }
+
+
+    /* =========================
+       ПАНЕЛЬ ТЕКУЩЕГО ХОДА
+    ========================= */
+
+    .turn-panel {
+      display: none;
+      margin-bottom: 14px;
+      padding: 16px;
+      background: rgba(20, 18, 24, 0.82);
+      border: 1px solid rgba(255, 159, 188, 0.55);
+      border-radius: 14px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.22), 0 0 18px rgba(255, 77, 240, 0.10);
+    }
+
+    .turn-panel.show { display: block; }
+
+    .turn-panel-title {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      overflow-wrap: anywhere;
+    }
+
+    .turn-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .turn-stat {
+      padding: 10px 8px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+    }
+
+    .turn-stat-label {
+      display: block;
+      margin-bottom: 3px;
+      color: #c8c4ca;
+      font-size: 0.78rem;
+    }
+
+    .turn-stat-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .hp-controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .hp-change-input,
+    .favorite-initiative {
+      width: 100%;
+      min-width: 0;
+      height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      background: rgba(0,0,0,.28);
+      color: #fff;
+      font: inherit;
+      outline: none;
+    }
+
+    .hp-btn {
+      min-width: 48px;
+      height: 44px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 10px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .hp-btn:hover { background: rgba(255,255,255,.23); }
+
+    .turn-nav {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .turn-nav button {
+      min-height: 44px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 10px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* =========================
+       ИЗБРАННЫЕ СУЩЕСТВА
+    ========================= */
+
+    .favorites-card {
+      margin: 14px 0;
+      padding: 14px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 14px;
+    }
+
+    .favorites-title {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #f4eaf0;
+    }
+
+    .favorite-create-grid {
+      display: grid;
+      grid-template-columns: 1.5fr .7fr .8fr;
+      gap: 8px;
+    }
+
+    .favorite-create-grid input {
+      width: 100%;
+      min-width: 0;
+      height: 44px;
+      padding: 0 11px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      background: rgba(20,18,24,.72);
+      color: #fff;
+      font: inherit;
+      outline: none;
+    }
+
+    .favorite-save {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 8px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 10px;
+      background: rgba(255,255,255,.14);
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .favorites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .favorite-item {
+      display: grid;
+      grid-template-columns: 1fr 86px auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0,0,0,.20);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 10px;
+    }
+
+    .favorite-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-weight: 600;
+    }
+
+    .favorite-meta {
+      display: block;
+      margin-top: 2px;
+      color: #c8c4ca;
+      font-size: .8rem;
+      font-weight: 400;
+    }
+
+    .favorite-add,
+    .favorite-delete {
+      height: 40px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 9px;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .favorite-add {
+      padding: 0 12px;
+      background: rgba(255,255,255,.14);
+      font-weight: 600;
+    }
+
+    .favorite-delete {
+      width: 40px;
+      background: transparent;
+      font-size: 1.05rem;
+    }
+
+    @media (max-width: 700px) {
+      .turn-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .hp-controls { grid-template-columns: 1fr 48px 48px; }
+      .favorite-create-grid { grid-template-columns: 1fr 1fr; }
+      .favorite-create-grid input:first-child { grid-column: 1 / -1; }
+      .favorite-item { grid-template-columns: 1fr 76px auto; }
+      .favorite-delete { grid-column: 3; }
+    }
+
+
+    /* =========================
+       УВЕДОМЛЕНИЕ О 0 ОЗ
+    ========================= */
+
+    .death-notice {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translate(-50%, 18px);
+      width: min(420px, calc(100vw - 28px));
+      padding: 14px;
+      background: rgba(20, 18, 24, 0.97);
+      border: 1px solid rgba(255, 107, 155, 0.75);
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(0,0,0,.45);
+      z-index: 4000;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease, visibility .2s;
+    }
+
+    .death-notice.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translate(-50%, 0);
+    }
+
+    .death-notice-text {
+      margin-bottom: 10px;
+      font-size: .95rem;
+      line-height: 1.35;
+    }
+
+    .death-notice-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .death-notice-actions button {
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 9px;
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .death-remove {
+      background: rgba(210, 55, 85, .72);
+    }
+
+    .death-keep {
+      background: rgba(255,255,255,.12);
+    }
+
+    /* =========================
+       ДЕКОРАТИВНЫЕ СИМВОЛЫ
+    ========================= */
+
+    .decor-layer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .symbol {
+      position: absolute;
+      font-size: clamp(70px, 10vw, 140px);
+      color: #ff4df0;
+      opacity: 0.18;
+      filter: drop-shadow(0 0 10px #ff4df0);
+      animation: pulse 6s ease-in-out infinite, spin 18s linear infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.12; filter: drop-shadow(0 0 6px #ff4df0); }
+      50% { opacity: 0.28; filter: drop-shadow(0 0 20px #ff4df0); }
+      100% { opacity: 0.12; filter: drop-shadow(0 0 6px #ff4df0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .s1 { left: 5%; top: 15%; }
+    .s2 { right: 8%; top: 25%; animation-delay: 1s; }
+    .s3 { left: 12%; top: 55%; animation-delay: 2s; }
+    .s4 { right: 15%; top: 65%; animation-delay: 3s; }
+    .s5 { left: 20%; top: 75%; animation-delay: 4s; }
+    .s6 { right: 25%; top: 45%; animation-delay: 5s; }
+    .s7 { left: 30%; top: 35%; animation-delay: 6s; }
+    .s8 { right: 30%; top: 15%; animation-delay: 7s; }
+
+    /* =========================
+       ТЕЛЕФОН
+    ========================= */
+
+    @media (max-width: 700px) {
+      #sideMenu {
+        width: 54px;
+        background: #050308;
+        border-right: none;
+        transition: width 0.25s ease;
+      }
+
+      #sideMenu.open {
+        width: 100vw;
+        box-shadow: none;
+      }
+
+      #menuTop {
+        height: 60px;
+        min-height: 60px;
+        padding: 7px 18px;
+      }
+
+      #menuDots {
+        width: 38px;
+        height: 38px;
+      }
+
+      #menuContent {
+        position: absolute;
+        left: 0;
+        top: 70px;
+        width: 100%;
+        padding: 10px 13px;
+        gap: 12px;
+        transform: translateX(-10px);
+      }
+
+      #sideMenu.open #menuContent { transform: translateX(0); }
+
+      #menuContent a,
+      #menuContent button {
+        min-height: 64px;
+        padding: 12px 18px;
+        background: #1a171d;
+        border: 1px solid #403b43;
+        border-radius: 12px;
+        font-size: 1.08rem;
+        font-weight: 600;
+        gap: 10px;
+      }
+
+      .main {
+        padding: 25px 12px 45px 66px;
+        transition: none;
+      }
+
+      .main.menu-open { margin-left: 0; }
+
+      .tracker { width: 100%; }
+
+      .page-header {
+        gap: 7px;
+        margin-bottom: 16px;
+      }
+
+      .back-btn { font-size: 38px; }
+
+      .page-title {
+        font-size: 1.55rem;
+        white-space: nowrap;
+      }
+
+      .clear-btn { font-size: 0.9rem; }
+
+      .timer-card { padding: 11px; }
+
+      .next-turn-btn { flex-basis: 100%; }
+
+      .form-card { padding: 14px; }
+
+      .master-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-enemies {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .participant {
+        min-height: 82px;
+        padding: 12px 13px;
+      }
+
+      .initiative-number {
+        width: 48px;
+        font-size: 2rem;
+      }
+
+      .participant-name { font-size: 1.08rem; }
+      .participant-subtitle { font-size: 0.82rem; }
+    }
+
+    @media (max-width: 380px) {
+      .main {
+        padding-left: 62px;
+        padding-right: 8px;
+      }
+
+      .page-title { font-size: 1.4rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <aside id="sideMenu">
+    <div id="menuTop">
+      <button id="menuDots" type="button" aria-label="Открыть меню" aria-expanded="false" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <nav id="menuContent">
+
+  <a href="index.html">
+    🏠
+    <span>Главная</span>
+  </a>
+
+  <a href="dices.html">
+    🎲
+    <span>Дайсы</span>
+  </a>
+
+  <a href="Initiative.html">
+    🎯
+    <span>Инициатива</span>
+  </a>
+
+  <a href="Notes.html">
+    📝
+    <span>Заметки</span>
+  </a>
+
+  <a href="Monstr.html">
+    👹
+    <span>Монстры</span>
+  </a>
+
+  <a href="Loot.html">
+    💰
+    <span>Лут</span>
+  </a>
+
+  <a href="NPC.html">
+  🎭
+  <span>NPC</span>
+</a>
+
+  <button
+    type="button"
+    onclick="toggleMenu(false)"
+  >
+    <span style="font-size: 25px;">×</span>
+    <span>Закрыть</span>
+  </button>
+
+</nav>
+  </aside>
+
+  <div class="decor-layer">
+    <div class="symbol s1">⭘</div>
+    <div class="symbol s2">ᛉ</div>
+    <div class="symbol s3">⚚</div>
+    <div class="symbol s4">✦</div>
+    <div class="symbol s5">⬢</div>
+    <div class="symbol s6">ᛟ</div>
+    <div class="symbol s7">⯁</div>
+    <div class="symbol s8">⚔️</div>
+  </div>
+
+  <main class="main" id="mainContent">
+    <section class="tracker">
+
+      <header class="page-header">
+        <button class="back-btn" type="button" onclick="goBack()" aria-label="Назад">←</button>
+        <h1 class="page-title">Трекер инициативы</h1>
+        <button class="clear-btn" type="button" onclick="clearAll()">Очистить</button>
+      </header>
+
+      <!-- РАУНД И ТЕКУЩИЙ ХОД -->
+      <div class="round-bar">
+        <div class="round-box">
+          Раунд <strong id="roundNumber">1</strong>
+        </div>
+
+        <div class="current-turn-box">
+          Ход: <span id="currentTurnName">—</span>
+        </div>
+      </div>
+
+      <!-- ТАЙМЕР -->
+      <div class="timer-card">
+        <span class="timer-label">Ход:</span>
+
+        <strong id="timerDisplay">30</strong>
+
+        <select id="timerSelect" class="timer-select" onchange="changeTimer()">
+          <option value="15">15 сек</option>
+          <option value="30" selected>30 сек</option>
+          <option value="60">60 сек</option>
+          <option value="180">180 сек</option>
+          <option value="300">300 сек</option>
+        </select>
+
+        <button class="timer-btn" type="button" onclick="toggleTimer()" id="timerButton">Старт</button>
+
+        <button class="next-turn-btn" type="button" onclick="nextTurn()">Следующий ход →</button>
+      </div>
+
+      <!-- ПАНЕЛЬ ТЕКУЩЕГО ХОДА -->
+      <div id="turnPanel" class="turn-panel">
+        <h2 id="turnPanelName" class="turn-panel-title">—</h2>
+
+        <div class="turn-stats">
+          <div class="turn-stat">
+            <span class="turn-stat-label">Инициатива</span>
+            <span id="turnPanelInitiative" class="turn-stat-value">—</span>
+          </div>
+          <div class="turn-stat">
+            <span class="turn-stat-label">КД</span>
+            <span id="turnPanelArmor" class="turn-stat-value">—</span>
+          </div>
+          <div class="turn-stat">
+            <span class="turn-stat-label">ОЗ</span>
+            <span id="turnPanelHp" class="turn-stat-value">—</span>
+          </div>
+        </div>
+
+        <div class="hp-controls">
+          <input id="hpChangeInput" class="hp-change-input" type="number" inputmode="numeric" min="1" step="1" value="1" aria-label="Количество ОЗ">
+          <button class="hp-btn" type="button" onclick="changeCurrentHp(-1)" aria-label="Убавить ОЗ">−</button>
+          <button class="hp-btn" type="button" onclick="changeCurrentHp(1)" aria-label="Прибавить ОЗ">+</button>
+        </div>
+
+        <div class="turn-nav">
+          <button type="button" onclick="previousTurn()">← Предыдущий</button>
+          <button type="button" onclick="nextTurn()">Следующий →</button>
+        </div>
+      </div>
+
+      <!-- ОБЫЧНАЯ ФОРМА -->
+      <div class="form-card">
+
+        <div class="input-wrap">
+          <input id="nameInput" class="name-input" type="text" placeholder="Имя участника" autocomplete="off">
+        </div>
+
+        <div class="input-wrap initiative-wrap">
+          <label class="initiative-label" for="initiativeInput">Инициатива</label>
+          <input id="initiativeInput" class="initiative-input" type="number" inputmode="numeric" step="1">
+        </div>
+
+        <div class="master-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 16px;">
+          <div class="input-wrap">
+            <label class="master-label" for="armorInput">КД</label>
+            <input id="armorInput" class="master-input" type="number" inputmode="numeric" step="1" placeholder="Напр. 15">
+          </div>
+          <div class="input-wrap">
+            <label class="master-label" for="hpInput">ОЗ</label>
+            <input id="hpInput" class="master-input" type="number" inputmode="numeric" step="1" placeholder="Напр. 30">
+          </div>
+        </div>
+
+        <button id="addButton" class="add-btn" type="button" onclick="addParticipant()" disabled>
+          Добавить
+        </button>
+
+      </div>
+
+      <!-- БЫСТРЫЕ ВРАГИ -->
+      <div class="quick-title">Быстро добавить:</div>
+      <div class="quick-enemies">
+        <button class="quick-enemy" type="button" onclick="selectEnemy(1)">Враг 1</button>
+        <button class="quick-enemy" type="button" onclick="selectEnemy(2)">Враг 2</button>
+        <button class="quick-enemy" type="button" onclick="selectEnemy(3)">Враг 3</button>
+        <button class="quick-enemy" type="button" onclick="selectEnemy(4)">Враг 4</button>
+        <button class="quick-enemy" type="button" onclick="selectEnemy(5)">Враг 5</button>
+        <button class="quick-enemy" type="button" onclick="selectEnemy(6)">Враг 6</button>
+      </div>
+
+      <!-- ИЗБРАННЫЕ СУЩЕСТВА -->
+      <div class="favorites-card">
+        <h3 class="favorites-title">⭐ Избранные существа</h3>
+
+        <div class="favorite-create-grid">
+          <input id="favoriteName" type="text" placeholder="Название" autocomplete="off">
+          <input id="favoriteArmor" type="number" inputmode="numeric" step="1" placeholder="КД">
+          <input id="favoriteHp" type="number" inputmode="numeric" step="1" placeholder="ОЗ">
+        </div>
+
+        <button class="favorite-save" type="button" onclick="saveFavorite()">Сохранить в избранное</button>
+
+        <div id="favoritesList" class="favorites-list"></div>
+      </div>
+
+      <!-- РЕЖИМ МАСТЕРА -->
+      <button class="master-toggle" type="button" onclick="toggleMasterMode()">
+        🎲 Для мастера
+      </button>
+
+      <div id="masterPanel" class="master-panel">
+        <div class="form-card">
+          <div class="master-grid">
+
+            <div class="input-wrap">
+              <input id="masterName" class="master-input" type="text" placeholder="Название / имя" autocomplete="off">
+            </div>
+
+            <div class="input-wrap">
+              <input id="masterBonus" class="master-input" type="number" inputmode="numeric" step="1" placeholder="+2 / -2">
+            </div>
+
+            <div class="input-wrap">
+              <input id="masterCount" class="master-input" type="number" inputmode="numeric" min="1" step="1" placeholder="Кол-во">
+            </div>
+
+            <div class="input-wrap">
+              <input id="masterArmor" class="master-input" type="number" inputmode="numeric" step="1" placeholder="КД">
+            </div>
+
+            <div class="input-wrap">
+              <input id="masterHp" class="master-input" type="number" inputmode="numeric" step="1" placeholder="ОЗ">
+            </div>
+
+          </div>
+
+          <button class="master-generate" type="button" onclick="generateMasterInitiative()">
+            🎲 Бросить инициативу
+          </button>
+        </div>
+      </div>
+
+      <div id="participants"></div>
+
+    </section>
+  </main>
+
+  <div id="deathNotice" class="death-notice" role="dialog" aria-live="polite">
+    <div id="deathNoticeText" class="death-notice-text"></div>
+    <div class="death-notice-actions">
+      <button class="death-remove" type="button" onclick="confirmDeathRemoval()">Удалить из трекера</button>
+      <button class="death-keep" type="button" onclick="closeDeathNotice()">Оставить</button>
+    </div>
+  </div>
+
+  <script>
+    const menu = document.getElementById("sideMenu");
+    const main = document.getElementById("mainContent");
+    const menuButton = document.getElementById("menuDots");
+
+    const nameInput = document.getElementById("nameInput");
+    const initiativeInput = document.getElementById("initiativeInput");
+    const addButton = document.getElementById("addButton");
+    const participants = document.getElementById("participants");
+    const armorInput = document.getElementById("armorInput");
+    const hpInput = document.getElementById("hpInput");
+
+    const turnPanel = document.getElementById("turnPanel");
+    const turnPanelName = document.getElementById("turnPanelName");
+    const turnPanelInitiative = document.getElementById("turnPanelInitiative");
+    const turnPanelArmor = document.getElementById("turnPanelArmor");
+    const turnPanelHp = document.getElementById("turnPanelHp");
+    const hpChangeInput = document.getElementById("hpChangeInput");
+
+    const deathNotice = document.getElementById("deathNotice");
+    const deathNoticeText = document.getElementById("deathNoticeText");
+    let pendingDeathId = null;
+
+    const favoriteName = document.getElementById("favoriteName");
+    const favoriteArmor = document.getElementById("favoriteArmor");
+    const favoriteHp = document.getElementById("favoriteHp");
+    const favoritesList = document.getElementById("favoritesList");
+
+    const masterPanel = document.getElementById("masterPanel");
+    const masterName = document.getElementById("masterName");
+    const masterBonus = document.getElementById("masterBonus");
+    const masterCount = document.getElementById("masterCount");
+    const masterArmor = document.getElementById("masterArmor");
+    const masterHp = document.getElementById("masterHp");
+
+    const timerDisplay = document.getElementById("timerDisplay");
+    const timerSelect = document.getElementById("timerSelect");
+    const timerButton = document.getElementById("timerButton");
+
+    let participantList = [];
+    let nextId = 1;
+    let currentTurnId = null;
+    let roundNumber = 1;
+
+    const roundNumberDisplay = document.getElementById("roundNumber");
+    const currentTurnNameDisplay = document.getElementById("currentTurnName");
+
+    let timerDuration = 30;
+    let timerRemaining = 30;
+    let timerInterval = null;
+    let timerRunning = false;
+
+    let enemyNames = {
+      1: "Враг 1",
+      2: "Враг 2",
+      3: "Враг 3",
+      4: "Враг 4",
+      5: "Враг 5",
+      6: "Враг 6"
+    };
+
+    /* =========================
+       МЕНЮ
+    ========================= */
+
+    function toggleMenu(forceState = null) {
+      const isOpen = forceState !== null
+        ? forceState
+        : !menu.classList.contains("open");
+
+      menu.classList.toggle("open", isOpen);
+      main.classList.toggle("menu-open", isOpen);
+
+      menuButton.setAttribute("aria-expanded", isOpen);
+      menuButton.setAttribute("aria-label", isOpen ? "Закрыть меню" : "Открыть меню");
+    }
+
+    /* =========================
+       ОБЫЧНОЕ ДОБАВЛЕНИЕ
+    ========================= */
+
+    function updateAddButton() {
+      const name = nameInput.value.trim();
+      const initiative = initiativeInput.value.trim();
+      addButton.disabled = name === "" || initiative === "";
+    }
+
+    nameInput.addEventListener("input", updateAddButton);
+    initiativeInput.addEventListener("input", updateAddButton);
+
+    function addParticipant() {
+      const name = nameInput.value.trim();
+      const initiativeText = initiativeInput.value.trim();
+
+      if (name === "" || initiativeText === "") return;
+
+      const initiative = Number(initiativeText);
+      if (!Number.isFinite(initiative)) return;
+
+      const armorText = armorInput.value.trim();
+      const hpText = hpInput.value.trim();
+      const armor = armorText === "" ? null : Number(armorText);
+      const maxHp = hpText === "" ? null : Number(hpText);
+
+      participantList.push({
+        id: nextId++,
+        name,
+        initiative,
+        armor: Number.isFinite(armor) ? armor : null,
+        maxHp: Number.isFinite(maxHp) ? maxHp : null,
+        currentHp: Number.isFinite(maxHp) ? maxHp : null
+      });
+
+      if (currentTurnId === null) {
+        currentTurnId = getHighestParticipantId();
+      }
+
+      renderParticipants();
+
+      nameInput.value = "";
+      initiativeInput.value = "";
+      armorInput.value = "";
+      hpInput.value = "";
+      updateAddButton();
+      nameInput.focus();
+    }
+
+    /* =========================
+       БЫСТРЫЕ ВРАГИ
+    ========================= */
+
+    function selectEnemy(number) {
+      nameInput.value = enemyNames[number];
+      initiativeInput.value = "";
+      updateAddButton();
+      initiativeInput.focus();
+    }
+
+    /* =========================
+       РЕЖИМ МАСТЕРА
+    ========================= */
+
+    function toggleMasterMode() {
+      masterPanel.classList.toggle("open");
+
+      if (masterPanel.classList.contains("open")) {
+        masterName.focus();
+      }
+    }
+
+    function generateMasterInitiative() {
+      const name = masterName.value.trim();
+      const bonusText = masterBonus.value.trim();
+      const countText = masterCount.value.trim();
+      const armorText = masterArmor.value.trim();
+      const hpText = masterHp.value.trim();
+
+      if (
+        name === "" ||
+        bonusText === "" ||
+        countText === "" ||
+        armorText === "" ||
+        hpText === ""
+      ) return;
+
+      const bonus = Number(bonusText);
+      const count = Number(countText);
+      const armor = Number(armorText);
+      const maxHp = Number(hpText);
+
+      if (
+        !Number.isInteger(bonus) ||
+        !Number.isInteger(count) ||
+        count < 1 ||
+        !Number.isFinite(armor) ||
+        !Number.isFinite(maxHp)
+      ) return;
+
+      for (let i = 1; i <= count; i++) {
+        // Each creature still rolls its own random d20 initiative.
+        const roll = Math.floor(Math.random() * 20) + 1;
+        const initiative = roll + bonus;
+        const generatedName = count === 1 ? name : `${name} ${i}`;
+
+        participantList.push({
+          id: nextId++,
+          name: generatedName,
+          initiative,
+          roll,
+          bonus,
+          armor,
+          maxHp,
+          currentHp: maxHp
+        });
+      }
+
+      if (currentTurnId === null) {
+        currentTurnId = getHighestParticipantId();
+      }
+
+      renderParticipants();
+
+      masterName.value = "";
+      masterBonus.value = "";
+      masterCount.value = "";
+      masterArmor.value = "";
+      masterHp.value = "";
+      masterName.focus();
+    }
+
+    /* =========================
+       СОРТИРОВКА
+    ========================= */
+
+    function sortParticipants() {
+      participantList.sort((a, b) => {
+        if (b.initiative !== a.initiative) {
+          return b.initiative - a.initiative;
+        }
+        return a.id - b.id;
+      });
+    }
+
+    function getHighestParticipantId() {
+      if (participantList.length === 0) return null;
+
+      return participantList.reduce((highest, participant) => {
+        return participant.initiative > highest.initiative ? participant : highest;
+      }).id;
+    }
+
+    function renderParticipants() {
+      sortParticipants();
+
+      participants.innerHTML = "";
+
+      participantList.forEach((participant, index) => {
+        const card = document.createElement("div");
+        card.className = "participant" + (participant.id === currentTurnId ? " active" : "");
+
+        const extraText = participant.roll !== undefined
+          ? `Бросок ${participant.roll}${participant.bonus >= 0 ? " + " : " - "}${Math.abs(participant.bonus)}`
+          : `Инициатива ${participant.initiative}`;
+
+        card.innerHTML = `
+          <div class="initiative-number">${participant.initiative}</div>
+          <div class="participant-info">
+            <div class="participant-name">${escapeHtml(participant.name)}</div>
+            <div class="participant-subtitle">${extraText}</div>
+          </div>
+          <button class="delete-btn" type="button" aria-label="Удалить участника" onclick="deleteParticipant(${index})">🗑</button>
+        `;
+
+        participants.appendChild(card);
+      });
+
+      renderTurnPanel();
+    }
+
+    /* =========================
+       УДАЛЕНИЕ / ОЧИСТКА
+    ========================= */
+
+    function deleteParticipant(index) {
+      const removed = participantList[index];
+      if (!removed) return;
+
+      const wasCurrent = removed.id === currentTurnId;
+      participantList.splice(index, 1);
+
+      if (participantList.length === 0) {
+        currentTurnId = null;
+        resetTimer();
+      } else if (wasCurrent) {
+        const nextIndex = index >= participantList.length ? 0 : index;
+        sortParticipants();
+        currentTurnId = participantList[nextIndex]?.id ?? participantList[0].id;
+        resetTimer();
+      }
+
+      renderParticipants();
+    }
+
+    function clearAll() {
+      participantList = [];
+      currentTurnId = null;
+      roundNumber = 1;
+      resetTimer();
+      renderParticipants();
+    }
+
+    /* =========================
+       ТАЙМЕР
+    ========================= */
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = timerRemaining;
+    }
+
+    function resetTimer() {
+      stopTimer();
+      timerRemaining = timerDuration;
+      updateTimerDisplay();
+    }
+
+    function changeTimer() {
+      timerDuration = Number(timerSelect.value);
+      resetTimer();
+    }
+
+    function startTimer() {
+      if (participantList.length === 0) return;
+
+      if (timerRemaining <= 0) {
+        timerRemaining = timerDuration;
+      }
+
+      timerRunning = true;
+      timerButton.textContent = "Пауза";
+
+      timerInterval = setInterval(() => {
+        if (timerRemaining > 0) {
+          timerRemaining--;
+          updateTimerDisplay();
+        } else {
+          stopTimer();
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval !== null) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      timerRunning = false;
+      timerButton.textContent = "Старт";
+    }
+
+    function toggleTimer() {
+      if (timerRunning) {
+        stopTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function moveTurn(direction) {
+      if (participantList.length === 0) return;
+
+      sortParticipants();
+
+      let currentIndex = participantList.findIndex(
+        participant => participant.id === currentTurnId
+      );
+
+      if (currentIndex === -1) {
+        currentIndex = direction > 0 ? 0 : participantList.length - 1;
+        currentTurnId = participantList[currentIndex].id;
+        resetTimer();
+        renderParticipants();
+        return;
+      }
+
+      const oldIndex = currentIndex;
+      currentIndex = (currentIndex + direction + participantList.length) % participantList.length;
+
+      // Новый раунд начинается после хода последнего участника,
+      // когда переходим снова к первому.
+      if (direction > 0 && oldIndex === participantList.length - 1 && currentIndex === 0) {
+        roundNumber++;
+      }
+
+      // При возврате назад через границу раунда уменьшаем номер раунда,
+      // но ниже первого раунда не опускаемся.
+      if (direction < 0 && oldIndex === 0 && currentIndex === participantList.length - 1) {
+        roundNumber = Math.max(1, roundNumber - 1);
+      }
+
+      currentTurnId = participantList[currentIndex].id;
+
+      resetTimer();
+      renderParticipants();
+    }
+
+    function nextTurn() {
+      moveTurn(1);
+    }
+
+    function previousTurn() {
+      moveTurn(-1);
+    }
+
+    function getCurrentParticipant() {
+      return participantList.find(participant => participant.id === currentTurnId) || null;
+    }
+
+    function renderTurnPanel() {
+      const current = getCurrentParticipant();
+
+      roundNumberDisplay.textContent = roundNumber;
+      currentTurnNameDisplay.textContent = current ? current.name : "—";
+
+      if (!current) {
+        turnPanel.classList.remove("show");
+        return;
+      }
+
+      turnPanel.classList.add("show");
+      turnPanelName.textContent = current.name;
+      turnPanelInitiative.textContent = current.initiative;
+      turnPanelArmor.textContent = current.armor ?? "—";
+
+      if (current.currentHp === null || current.currentHp === undefined) {
+        turnPanelHp.textContent = "—";
+      } else if (current.maxHp === null || current.maxHp === undefined) {
+        turnPanelHp.textContent = current.currentHp;
+      } else {
+        turnPanelHp.textContent = `${current.currentHp} / ${current.maxHp}`;
+      }
+    }
+
+    function changeCurrentHp(direction) {
+      const current = getCurrentParticipant();
+      if (!current) return;
+
+      if (current.currentHp === null || current.currentHp === undefined) {
+        alert("Для этого участника ОЗ не указаны.");
+        return;
+      }
+
+      const amount = Math.abs(Number(hpChangeInput.value));
+      if (!Number.isFinite(amount) || amount <= 0) return;
+
+      current.currentHp += direction * amount;
+      renderParticipants();
+
+      if (current.currentHp <= 0) {
+        showDeathNotice(current);
+      }
+    }
+
+    function showDeathNotice(participant) {
+      pendingDeathId = participant.id;
+      deathNoticeText.textContent =
+        `${participant.name}: ОЗ ${participant.currentHp}. Удалить существо из трекера?`;
+      deathNotice.classList.add("show");
+    }
+
+    function closeDeathNotice() {
+      pendingDeathId = null;
+      deathNotice.classList.remove("show");
+    }
+
+    function confirmDeathRemoval() {
+      if (pendingDeathId === null) return;
+
+      const index = participantList.findIndex(
+        participant => participant.id === pendingDeathId
+      );
+
+      closeDeathNotice();
+
+      if (index !== -1) {
+        deleteParticipant(index);
+      }
+    }
+
+
+    /* =========================
+       ИЗБРАННЫЕ СУЩЕСТВА
+    ========================= */
+
+    const FAVORITES_KEY = "initiativeFavorites";
+
+    function getFavorites() {
+      try {
+        return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setFavorites(items) {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
+    }
+
+    function saveFavorite() {
+      const name = favoriteName.value.trim();
+      const armor = Number(favoriteArmor.value);
+      const hp = Number(favoriteHp.value);
+
+      if (
+        name === "" ||
+        favoriteArmor.value.trim() === "" ||
+        favoriteHp.value.trim() === "" ||
+        !Number.isFinite(armor) ||
+        !Number.isFinite(hp)
+      ) {
+        alert("Укажи название, КД и ОЗ существа.");
+        return;
+      }
+
+      const items = getFavorites();
+
+      // Каждое избранное существо хранится отдельно в localStorage.
+      // Если имя уже существует, обновляем его КД/ОЗ, а не создаём случайный дубль.
+      const existing = items.find(
+        item => String(item.name).trim().toLowerCase() === name.toLowerCase()
+      );
+
+      if (existing) {
+        existing.armor = armor;
+        existing.hp = hp;
+      } else {
+        items.push({
+          id: (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `fav-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name,
+          armor,
+          hp
+        });
+      }
+
+      setFavorites(items);
+      favoriteName.value = "";
+      favoriteArmor.value = "";
+      favoriteHp.value = "";
+      renderFavorites();
+    }
+
+    function deleteFavorite(id) {
+      const items = getFavorites().filter(item => item.id !== id);
+      setFavorites(items);
+      renderFavorites();
+    }
+
+    function addFavoriteToInitiative(id) {
+      const favorite = getFavorites().find(item => item.id === id);
+      if (!favorite) return;
+
+      const initiativeField = [...favoritesList.querySelectorAll(".favorite-initiative")]
+        .find(field => field.dataset.favoriteId === String(id));
+      const initiativeText = initiativeField?.value.trim() ?? "";
+      if (initiativeText === "") {
+        alert("Укажи инициативу перед добавлением.");
+        initiativeField?.focus();
+        return;
+      }
+
+      const initiative = Number(initiativeText);
+      if (!Number.isFinite(initiative)) return;
+
+      participantList.push({
+        id: nextId++,
+        name: favorite.name,
+        initiative,
+        armor: favorite.armor,
+        maxHp: favorite.hp,
+        currentHp: favorite.hp
+      });
+
+      if (currentTurnId === null) {
+        currentTurnId = getHighestParticipantId();
+      }
+
+      renderParticipants();
+      initiativeField.value = "";
+    }
+
+    function renderFavorites() {
+      const items = getFavorites();
+      favoritesList.innerHTML = "";
+
+      if (items.length === 0) {
+        favoritesList.innerHTML = '<div style="color:#c8c4ca;font-size:.9rem;">Пока нет сохранённых существ.</div>';
+        return;
+      }
+
+      items.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "favorite-item";
+        row.innerHTML = `
+          <div class="favorite-name">
+            ${escapeHtml(item.name)}
+            <span class="favorite-meta">КД ${item.armor} · ОЗ ${item.hp}</span>
+          </div>
+          <input
+            class="favorite-initiative"
+            data-favorite-id="${escapeHtml(String(item.id))}"
+            type="number"
+            inputmode="numeric"
+            step="1"
+            placeholder="Иниц."
+            aria-label="Инициатива ${escapeHtml(item.name)}"
+          >
+          <button class="favorite-add" type="button">Добавить</button>
+          <button class="favorite-delete" type="button" aria-label="Удалить из избранного">✕</button>
+        `;
+
+        row.querySelector(".favorite-add").addEventListener("click", () => {
+          addFavoriteToInitiative(item.id);
+        });
+
+        row.querySelector(".favorite-delete").addEventListener("click", () => {
+          deleteFavorite(item.id);
+        });
+
+        favoritesList.appendChild(row);
+      });
+    }
+
+    /* =========================
+       СЛУЖЕБНЫЕ
+    ========================= */
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function goBack() {
+      if (document.referrer) {
+        history.back();
+      } else {
+        window.location.href = "index.html";
+      }
+    }
+
+    nameInput.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") initiativeInput.focus();
+    });
+
+    initiativeInput.addEventListener("keydown", function(event) {
+      if (event.key === "Enter" && !addButton.disabled) addParticipant();
+    });
+
+    masterName.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") masterBonus.focus();
+    });
+
+    masterBonus.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") masterCount.focus();
+    });
+
+    masterCount.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") masterArmor.focus();
+    });
+
+    masterArmor.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") masterHp.focus();
+    });
+
+    masterHp.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") generateMasterInitiative();
+    });
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener("touchstart", function(event) {
+      const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    }, { passive: true });
+
+    document.addEventListener("touchend", function(event) {
+      const touch = event.changedTouches[0];
+      const diffX = touch.clientX - touchStartX;
+      const diffY = touch.clientY - touchStartY;
+
+      if (Math.abs(diffX) < Math.abs(diffY)) return;
+
+      if (touchStartX < 50 && diffX > 60) {
+        toggleMenu(true);
+      } else if (menu.classList.contains("open") && diffX < -60) {
+        toggleMenu(false);
+      }
+    }, { passive: true });
+
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") toggleMenu(false);
+    });
+
+    updateTimerDisplay();
+    renderFavorites();
+    renderTurnPanel();
+  </script>
+</body>
+</html>
